@@ -1,0 +1,33 @@
+terraform {
+  backend "s3" {
+    key            = "stage/asg/terraform.tfstate" // 상태파일 저장 경로
+    bucket         = "myterraform-bucket-state-hwang-t"
+    region         = "ap-northeast-2"
+    profile        = "terraform_user"
+    dynamodb_table = "myTerraform-bucket-lock-hwang-t"
+    encrypt        = true
+  }
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region  = "ap-northeast-2"
+  profile = "terraform_user"
+}
+
+module "stage_asg" {
+  source           = "github.com/ppeuming/Terraform_Project_LocalModule//aws-asg?ref=v1.1.1" # git hub tag # 실수로 한 번 더 uptdate
+  name             = "stage"                                                                 # variables 설정
+  instance_type    = "t2.micro"
+  SSH_SG_id        = data.terraform_remote_state.vpc_remote_data.outputs.SSH_SG_id
+  HTTP_HTTPS_SG_id = data.terraform_remote_state.vpc_remote_data.outputs.HTTP_HTTPS_SG_id
+  desired_size     = "1" # ( Update )
+  min_size         = "1"
+  max_size         = "1"
+  private_subnets  = data.terraform_remote_state.vpc_remote_data.outputs.private_subnets
+}
